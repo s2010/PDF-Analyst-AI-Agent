@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  pdf-analyst:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - CHUNK_SIZE=${CHUNK_SIZE:-1000}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-200}
+      - MAX_RESULTS=${MAX_RESULTS:-5}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-52428800}
+      - MAX_QUESTION_LENGTH=${MAX_QUESTION_LENGTH:-1000}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100/hour}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      - pdf_data:/app/data
+      - pdf_logs:/app/logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - pdf_network
+
+volumes:
+  pdf_data:
+    driver: local
+  pdf_logs:
+    driver: local
+
+networks:
+  pdf_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
