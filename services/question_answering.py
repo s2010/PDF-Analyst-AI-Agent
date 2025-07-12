@@ -10,15 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 class QuestionAnsweringService:
-    """Service for handling question answering using OpenAI with security measures"""
+    """Question answering service using OpenAI"""
     
     def __init__(self):
-        # Configure OpenAI
         openai.api_key = settings.OPENAI_API_KEY
     
     def generate_answer(self, question: str, context_chunks: List[Dict]) -> str:
         """
-        Generate answer using OpenAI chat completion with safety measures
+        Generate answer using OpenAI chat completion
         
         Args:
             question: User's question
@@ -26,14 +25,11 @@ class QuestionAnsweringService:
             
         Returns:
             str: Generated answer
-            
-        Raises:
-            HTTPException: If answer generation fails
         """
         if not context_chunks:
             return "No relevant information found to answer your question."
         
-        # Limit context size to prevent token overflow
+        # Build context from chunks
         context_parts = []
         current_length = 0
         
@@ -46,10 +42,9 @@ class QuestionAnsweringService:
         
         context = "\n\n".join(context_parts)
         
-        system_prompt = """You are a helpful AI assistant that answers questions based on PDF documents. 
+        system_prompt = """You are a helpful assistant that answers questions based on PDF documents. 
         Use only the provided context to answer questions. If the answer cannot be found in the context, 
-        say so clearly. Always reference the page numbers when providing answers. 
-        Do not include any harmful, illegal, or inappropriate content in your responses."""
+        say so clearly. Always reference page numbers when providing answers."""
         
         user_prompt = f"""Context from PDF:
 {context}

@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Tuple
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -13,35 +13,30 @@ logger = logging.getLogger(__name__)
 
 
 class PDFProcessor:
-    """Service for PDF text extraction and processing with security checks"""
+    """PDF text extraction and processing service"""
     
     @staticmethod
     def extract_text_with_pages(pdf_path: str) -> List[PageContent]:
         """
-        Extract text from PDF with page numbers and security validation
+        Extract text from PDF with page numbers
         
         Args:
-            pdf_path: Path to the PDF file
+            pdf_path: Path to PDF file
             
         Returns:
-            List[PageContent]: List of page content objects
-            
-        Raises:
-            HTTPException: If PDF processing fails
+            List[PageContent]: Page content objects
         """
         try:
             doc = fitz.open(pdf_path)
             pages_content = []
             
-            # Limit processing to reasonable number of pages
             page_count = min(doc.page_count, settings.MAX_PDF_PAGES)
             
             for page_num in range(page_count):
                 page = doc[page_num]
                 text = page.get_text()
                 
-                if text.strip():  # Only add pages with content
-                    # Sanitize extracted text
+                if text.strip():
                     safe_text = SecurityUtils.sanitize_text(text)
                     
                     pages_content.append(PageContent(
@@ -68,15 +63,15 @@ class PDFProcessor:
         overlap: int = None
     ) -> List[str]:
         """
-        Split text into overlapping chunks with size validation
+        Split text into overlapping chunks
         
         Args:
             text: Text content to chunk
-            chunk_size: Size of each chunk (defaults to settings value)
-            overlap: Overlap between chunks (defaults to settings value)
+            chunk_size: Size of each chunk
+            overlap: Overlap between chunks
             
         Returns:
-            List[str]: List of text chunks
+            List[str]: Text chunks
         """
         chunk_size = chunk_size or settings.CHUNK_SIZE
         overlap = overlap or settings.CHUNK_OVERLAP
@@ -91,7 +86,7 @@ class PDFProcessor:
             end = start + chunk_size
             chunk = text[start:end]
             
-            # Try to break at word boundaries
+            # Break at word boundaries
             if end < len(text):
                 last_space = chunk.rfind(' ')
                 if last_space > chunk_size // 2:
@@ -108,16 +103,15 @@ class PDFProcessor:
         return chunks
     
     @classmethod
-    def process_pdf(cls, pdf_path: str) -> tuple[List[str], List[dict]]:
+    def process_pdf(cls, pdf_path: str) -> Tuple[List[str], List[dict]]:
         """
-        Complete PDF processing pipeline: extract text and create chunks
+        Complete PDF processing pipeline
         
         Args:
-            pdf_path: Path to the PDF file
+            pdf_path: Path to PDF file
             
         Returns:
-            tuple: (chunks, metadata) where chunks is list of text chunks
-                   and metadata is list of corresponding metadata dicts
+            Tuple[List[str], List[dict]]: (chunks, metadata)
         """
         # Extract text with page numbers
         pages_content = cls.extract_text_with_pages(pdf_path)
@@ -137,8 +131,6 @@ class PDFProcessor:
             
             for i, chunk in enumerate(chunks):
                 all_chunks.append(chunk)
-                # Note: metadata structure will be completed by the caller
-                # with document-specific information like document_id, filename, etc.
                 all_metadata.append({
                     "page_number": page_data.page_number,
                     "chunk_index": i,

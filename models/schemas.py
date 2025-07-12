@@ -5,85 +5,85 @@ from core.config import settings
 
 
 class QuestionRequest(BaseModel):
-    """Request model for asking questions about PDF content"""
+    """Request model for document queries"""
     question: str = Field(..., min_length=1, max_length=settings.MAX_QUESTION_LENGTH)
     max_results: Optional[int] = Field(default=settings.MAX_RESULTS, ge=1, le=20)
     
     @validator('question')
     def sanitize_question(cls, v):
-        """Remove potential harmful characters and limit length"""
+        """Remove harmful characters and limit length"""
         sanitized = ''.join(char for char in v if char.isprintable())
         return sanitized.strip()
 
 
 class SourceInfo(BaseModel):
-    """Information about a source chunk"""
-    content: str = Field(..., description="Preview of the source content")
-    page_number: int = Field(..., description="Page number in the original document")
+    """Source chunk information"""
+    content: str = Field(..., description="Content preview")
+    page_number: int = Field(..., description="Page number in document")
     filename: str = Field(..., description="Original filename")
-    similarity_score: float = Field(..., description="Similarity score for the match")
-    chunk_id: str = Field(..., description="Unique identifier for the chunk")
+    similarity_score: float = Field(..., description="Similarity score")
+    chunk_id: str = Field(..., description="Unique chunk identifier")
 
 
 class AnswerResponse(BaseModel):
-    """Response model for question answering"""
-    answer: str = Field(..., description="Generated answer to the question")
-    sources: List[SourceInfo] = Field(..., description="List of source chunks used")
+    """Question answering response"""
+    answer: str = Field(..., description="Generated answer")
+    sources: List[SourceInfo] = Field(..., description="Source chunks")
     query: str = Field(..., description="Original question")
-    processing_time: float = Field(..., description="Time taken to process the request")
+    processing_time: float = Field(..., description="Processing time")
 
 
 class UploadResponse(BaseModel):
-    """Response model for PDF upload"""
+    """PDF upload response"""
     message: str = Field(..., description="Status message")
-    document_id: str = Field(..., description="Unique identifier for the uploaded document")
-    pages_processed: int = Field(..., description="Number of pages processed")
-    processing_time: float = Field(..., description="Time taken to process the upload")
+    document_id: str = Field(..., description="Document identifier")
+    pages_processed: int = Field(..., description="Pages processed")
+    processing_time: float = Field(..., description="Processing time")
 
 
 class DocumentInfo(BaseModel):
-    """Information about a processed document"""
+    """Document information"""
     filename: str = Field(..., description="Original filename")
-    pages_count: int = Field(..., description="Number of pages in the document")
-    chunks_count: int = Field(..., description="Number of text chunks created")
+    pages_count: int = Field(..., description="Page count")
+    chunks_count: int = Field(..., description="Chunk count")
     upload_time: str = Field(..., description="Upload timestamp")
-    file_hash: str = Field(..., description="SHA-256 hash of the file")
+    file_hash: str = Field(..., description="File hash")
     file_size: int = Field(..., description="File size in bytes")
 
 
 class StatusResponse(BaseModel):
-    """Response model for system status"""
+    """System status response"""
     status: str = Field(..., description="System status")
-    total_documents: int = Field(..., description="Total number of processed documents")
-    total_chunks: int = Field(..., description="Total number of text chunks")
+    total_documents: int = Field(..., description="Total documents")
+    total_chunks: int = Field(..., description="Total chunks")
     uptime: str = Field(..., description="System uptime")
     version: str = Field(..., description="Application version")
 
 
 class HealthResponse(BaseModel):
-    """Response model for health check"""
+    """Health check response"""
     status: str = Field(..., description="Health status")
     timestamp: str = Field(..., description="Current timestamp")
 
 
 class ChunkMetadata(BaseModel):
-    """Metadata for a text chunk"""
+    """Text chunk metadata"""
     document_id: str = Field(..., description="Document identifier")
     filename: str = Field(..., description="Original filename")
     page_number: int = Field(..., description="Page number")
-    chunk_index: int = Field(..., description="Index of chunk within page")
+    chunk_index: int = Field(..., description="Chunk index")
     chunk_id: str = Field(..., description="Unique chunk identifier")
-    file_hash: str = Field(..., description="File hash for integrity")
+    file_hash: str = Field(..., description="File hash")
 
 
 class PageContent(BaseModel):
-    """Content extracted from a PDF page"""
+    """PDF page content"""
     page_number: int = Field(..., description="Page number")
-    content: str = Field(..., description="Extracted text content")
+    content: str = Field(..., description="Text content")
     char_count: int = Field(..., description="Character count")
 
 
 class ErrorResponse(BaseModel):
-    """Standard error response model"""
+    """Error response"""
     error: str = Field(..., description="Error message")
-    detail: Optional[str] = Field(None, description="Additional error details") 
+    detail: Optional[str] = Field(None, description="Error details") 

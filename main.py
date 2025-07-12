@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,50 +26,45 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize rate limiter
+# Initialize components
 limiter = Limiter(key_func=get_remote_address)
-
-# Initialize global vector store
 vector_store_service = VectorStoreService()
 
-# Lifespan context manager for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("Starting PDF Analyst AI Agent...")
+    """Application lifespan management"""
+    logger.info("Starting PDF Document Processor...")
     
-    # Validate required environment variables
+    # Validate configuration
     if not settings.OPENAI_API_KEY:
-        logger.error("OPENAI_API_KEY environment variable is required")
-        raise ValueError("OPENAI_API_KEY environment variable is required")
+        logger.error("OPENAI_API_KEY is required")
+        raise ValueError("OPENAI_API_KEY is required")
     
-    # Load vector database
+    # Initialize services
     vector_store_service.load()
-    
-    # Store vector service in app state
     app.state.vector_store = vector_store_service
     
     logger.info("Application started successfully")
     yield
     
-    # Shutdown
+    # Cleanup
     try:
         vector_store_service.save()
         logger.info("Application shutdown completed")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
-# Initialize FastAPI app
+# Initialize FastAPI application
 app = FastAPI(
-    title="PDF Analyst AI Agent",
+    title="PDF Document Processor",
     version="1.0.0",
-    description="A secure PDF analysis service with AI-powered question answering",
+    description="Document processing service with text extraction and semantic search",
     docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
     lifespan=lifespan
 )
 
-# Add security middleware
+# Add middleware
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 app.add_middleware(
@@ -80,7 +76,7 @@ app.add_middleware(
     max_age=86400,
 )
 
-# Add rate limit exceeded handler
+# Configure rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -118,7 +114,7 @@ async def internal_error_handler(request: Request, exc):
 @app.get("/")
 async def root():
     """Root endpoint for health check"""
-    return {"message": "PDF Analyst AI Agent is running", "status": "healthy"}
+    return {"message": "PDF Document Processor", "status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -16,16 +16,12 @@ from services.vector_store import VectorStoreService
 from services.question_answering import QuestionAnsweringService
 
 logger = logging.getLogger(__name__)
-
-# Initialize router
 router = APIRouter()
-
-# Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
 
 def get_vector_store(request: Request) -> VectorStoreService:
-    """Dependency to get vector store service from app state"""
+    """Get vector store service from app state"""
     return request.app.state.vector_store
 
 
@@ -37,23 +33,20 @@ async def ask_question(
     vector_store: VectorStoreService = Depends(get_vector_store)
 ):
     """
-    Ask a question about the uploaded PDFs with rate limiting
+    Query documents with natural language questions
     
     Args:
         request: FastAPI request object
-        question_request: Question request with query and parameters
-        vector_store: Vector store service dependency
+        question_request: Question and parameters
+        vector_store: Vector store service
         
     Returns:
-        AnswerResponse: Answer with sources and metadata
-        
-    Raises:
-        HTTPException: If question processing fails
+        AnswerResponse: Generated answer with sources
     """
     start_time = datetime.now()
     
     try:
-        # Search for relevant chunks using vector store
+        # Search for relevant content
         relevant_chunks = vector_store.search(
             question_request.question, 
             k=question_request.max_results
@@ -61,17 +54,15 @@ async def ask_question(
         
         if not relevant_chunks:
             return AnswerResponse(
-                answer="No relevant information found to answer your question. Please make sure you have uploaded PDF documents.",
+                answer="No relevant information found. Please upload PDF documents first.",
                 sources=[],
                 query=question_request.question,
                 processing_time=(datetime.now() - start_time).total_seconds()
             )
         
-        # Generate answer using question answering service
+        # Generate answer
         qa_service = QuestionAnsweringService()
         answer = qa_service.generate_answer(question_request.question, relevant_chunks)
-        
-        # Prepare sources for response
         sources = qa_service.prepare_sources(relevant_chunks)
         
         processing_time = (datetime.now() - start_time).total_seconds()
@@ -89,7 +80,6 @@ async def ask_question(
         )
     
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
         logger.error(f"Error answering question: {e}")
@@ -107,10 +97,10 @@ async def get_status(
     Get system status and statistics
     
     Args:
-        vector_store: Vector store service dependency
+        vector_store: Vector store service
         
     Returns:
-        StatusResponse: System status with statistics
+        StatusResponse: System status information
     """
     try:
         stats = vector_store.get_stats()
@@ -133,10 +123,10 @@ async def get_status(
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """
-    Simple health check endpoint for monitoring
+    Health check endpoint for monitoring
     
     Returns:
-        HealthResponse: Health status with timestamp
+        HealthResponse: Health status
     """
     return HealthResponse(
         status="healthy",

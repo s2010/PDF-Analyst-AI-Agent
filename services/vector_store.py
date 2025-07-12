@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStoreService:
-    """Service for vector database operations using FAISS with security measures"""
+    """Vector database service using FAISS"""
     
     def __init__(self):
         self.index = None
@@ -29,16 +29,13 @@ class VectorStoreService:
     
     def create_embeddings(self, texts: List[str]) -> np.ndarray:
         """
-        Create embeddings using OpenAI API with error handling and batching
+        Create embeddings using OpenAI API
         
         Args:
             texts: List of text strings to embed
             
         Returns:
             np.ndarray: Array of embeddings
-            
-        Raises:
-            HTTPException: If embedding creation fails
         """
         try:
             # Batch process to avoid rate limits
@@ -78,19 +75,16 @@ class VectorStoreService:
     
     def add_documents(self, chunks: List[str], metadata: List[Dict]):
         """
-        Add document chunks to vector database with limits
+        Add document chunks to vector database
         
         Args:
             chunks: List of text chunks
-            metadata: List of metadata dictionaries for each chunk
-            
-        Raises:
-            HTTPException: If operation fails or limits are exceeded
+            metadata: List of metadata dictionaries
         """
         if not chunks:
             return
         
-        # Check total chunks limit
+        # Check limits
         if len(self.chunks) + len(chunks) > settings.MAX_TOTAL_CHUNKS:
             raise HTTPException(
                 status_code=413, 
@@ -100,11 +94,11 @@ class VectorStoreService:
         # Create embeddings
         embeddings = self.create_embeddings(chunks)
         
-        # Initialize FAISS index if not exists
+        # Initialize index if needed
         if self.index is None:
-            self.index = faiss.IndexFlatIP(self.dimension)  # Inner product for cosine similarity
+            self.index = faiss.IndexFlatIP(self.dimension)
         
-        # Normalize embeddings for cosine similarity
+        # Normalize for cosine similarity
         faiss.normalize_L2(embeddings)
         
         # Add to index
@@ -118,21 +112,20 @@ class VectorStoreService:
     
     def search(self, query: str, k: int = None) -> List[Dict]:
         """
-        Search for similar chunks with input validation
+        Search for similar chunks
         
         Args:
             query: Search query string
-            k: Number of results to return (defaults to settings value)
+            k: Number of results to return
             
         Returns:
-            List[Dict]: List of search results with content and metadata
+            List[Dict]: Search results with content and metadata
         """
         k = k or settings.MAX_RESULTS
         
         if self.index is None or self.index.ntotal == 0:
             return []
         
-        # Validate and sanitize query
         if not query or len(query.strip()) == 0:
             return []
         
@@ -141,27 +134,27 @@ class VectorStoreService:
         faiss.normalize_L2(query_embedding)
         
         # Search with bounds checking
-        search_k = min(k, self.index.ntotal, 20)  # Limit max results
+        search_k = min(k, self.index.ntotal, 20)
         scores, indices = self.index.search(query_embedding, search_k)
         
         results = []
         for score, idx in zip(scores[0], indices[0]):
-            if idx >= 0 and idx < len(self.chunks):  # Bounds check
+            if idx >= 0 and idx < len(self.chunks):
                 results.append({
                     "content": self.chunks[idx],
                     "metadata": self.metadata[idx],
                     "similarity_score": float(score)
                 })
         
-        logger.info(f"Search query returned {len(results)} results")
+        logger.info(f"Search returned {len(results)} results")
         return results
     
     def save(self, path: Path = None):
         """
-        Save vector database to disk with error handling
+        Save vector database to disk
         
         Args:
-            path: Optional custom path (defaults to settings path)
+            path: Optional custom path
         """
         path = path or settings.VECTOR_DB_PATH
         
@@ -188,10 +181,10 @@ class VectorStoreService:
     
     def load(self, path: Path = None):
         """
-        Load vector database from disk with error handling
+        Load vector database from disk
         
         Args:
-            path: Optional custom path (defaults to settings path)
+            path: Optional custom path
         """
         path = path or settings.VECTOR_DB_PATH
         
@@ -248,7 +241,7 @@ class VectorStoreService:
         
         Args:
             doc_id: Document identifier
-            metadata: Document metadata dictionary
+            metadata: Document metadata
         """
         self.document_metadata[doc_id] = metadata
         logger.info(f"Added metadata for document: {doc_id}") 
